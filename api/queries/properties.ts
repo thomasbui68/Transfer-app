@@ -7,6 +7,7 @@ export type InsertProperty = InferInsertModel<typeof properties>;
 
 export async function findAllProperties(search?: string) {
   const db = getDb();
+  if (!db) return [];
   const conditions = [];
   if (search) conditions.push(like(properties.address, `%${search}%`));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -14,18 +15,26 @@ export async function findAllProperties(search?: string) {
 }
 
 export async function findPropertyById(id: number) {
-  const rows = await getDb().select().from(properties).where(eq(properties.id, id)).limit(1);
+  const db = getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(properties).where(eq(properties.id, id)).limit(1);
   return rows[0];
 }
 
 export async function createProperty(data: InsertProperty) {
-  return getDb().insert(properties).values(data);
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(properties).values(data);
 }
 
 export async function updateProperty(id: number, data: Partial<InsertProperty>) {
-  await getDb().update(properties).set(data).where(eq(properties.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(properties).set(data).where(eq(properties.id, id));
 }
 
 export async function deleteProperty(id: number) {
-  await getDb().delete(properties).where(eq(properties.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(properties).where(eq(properties.id, id));
 }

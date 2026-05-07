@@ -20916,8 +20916,35 @@ __export(vite_exports, {
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+function findDistPath() {
+  const candidates = [
+    path.resolve(__dirname, "../../dist/public"),
+    // dev: api/lib -> root/dist/public
+    path.resolve(__dirname, "../dist/public"),
+    // bundled at root
+    path.resolve(__dirname, "dist/public"),
+    // same dir
+    path.resolve(process.cwd(), "dist/public"),
+    // Railway working dir
+    path.resolve("/app/dist/public")
+    // Docker common path
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, "index.html"))) {
+      console.log(`Found frontend at: ${candidate}`);
+      return candidate;
+    }
+  }
+  console.error("Could not find dist/public with index.html");
+  console.error("Tried:", candidates);
+  return null;
+}
 function serveStaticFiles(app2) {
-  const distPath = path.resolve(__dirname, "../../dist/public");
+  const distPath = findDistPath();
+  if (!distPath) {
+    app2.use("*", (c) => c.json({ error: "Frontend not built" }, 500));
+    return;
+  }
   app2.use("*", serveStatic({ root: distPath }));
   app2.notFound((c) => {
     const accept = c.req.header("accept") ?? "";
@@ -20925,9 +20952,6 @@ function serveStaticFiles(app2) {
       return c.json({ error: "Not Found" }, 404);
     }
     const indexPath = path.resolve(distPath, "index.html");
-    if (!fs.existsSync(indexPath)) {
-      return c.json({ error: "Frontend not built" }, 500);
-    }
     const content = fs.readFileSync(indexPath, "utf-8");
     return c.html(content);
   });
@@ -46892,11 +46916,17 @@ var expensesRelations = relations(expenses, ({ one }) => ({
 var fullSchema = { ...schema_exports, ...relations_exports };
 var instance;
 var connectionError = null;
+var hasAttempted = false;
 function getDb() {
+  if (hasAttempted && !instance) {
+    return null;
+  }
   if (!instance) {
+    hasAttempted = true;
     if (!env.databaseUrl) {
       connectionError = "DATABASE_URL not configured";
-      throw new Error(connectionError);
+      console.warn("[DB] " + connectionError);
+      return null;
     }
     try {
       instance = drizzle(env.databaseUrl, {
@@ -46905,7 +46935,8 @@ function getDb() {
       });
     } catch (err) {
       connectionError = err instanceof Error ? err.message : "Unknown DB error";
-      throw new Error(connectionError);
+      console.error("[DB] Connection failed:", connectionError);
+      return null;
     }
   }
   return instance;
@@ -46917,23 +46948,32 @@ function getDbStatus() {
 // api/queries/properties.ts
 async function findAllProperties(search) {
   const db = getDb();
+  if (!db) return [];
   const conditions = [];
   if (search) conditions.push(like(properties.address, `%${search}%`));
   const where = conditions.length > 0 ? and(...conditions) : void 0;
   return db.select().from(properties).where(where).orderBy(desc(properties.createdAt));
 }
 async function findPropertyById(id) {
-  const rows = await getDb().select().from(properties).where(eq(properties.id, id)).limit(1);
+  const db = getDb();
+  if (!db) return void 0;
+  const rows = await db.select().from(properties).where(eq(properties.id, id)).limit(1);
   return rows[0];
 }
 async function createProperty(data) {
-  return getDb().insert(properties).values(data);
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(properties).values(data);
 }
 async function updateProperty(id, data) {
-  await getDb().update(properties).set(data).where(eq(properties.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(properties).set(data).where(eq(properties.id, id));
 }
 async function deleteProperty(id) {
-  await getDb().delete(properties).where(eq(properties.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(properties).where(eq(properties.id, id));
 }
 
 // api/property-router.ts
@@ -46994,53 +47034,85 @@ var propertyRouter = createRouter({
 
 // api/queries/transactions.ts
 async function findAllTransactions() {
-  return getDb().select().from(transactions).orderBy(desc(transactions.createdAt));
+  const db = getDb();
+  if (!db) return [];
+  return db.select().from(transactions).orderBy(desc(transactions.createdAt));
 }
 async function findTransactionById(id) {
-  const rows = await getDb().select().from(transactions).where(eq(transactions.id, id)).limit(1);
+  const db = getDb();
+  if (!db) return void 0;
+  const rows = await db.select().from(transactions).where(eq(transactions.id, id)).limit(1);
   return rows[0];
 }
 async function createTransaction(data) {
-  return getDb().insert(transactions).values(data);
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(transactions).values(data);
 }
 async function updateTransaction(id, data) {
-  await getDb().update(transactions).set(data).where(eq(transactions.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(transactions).set(data).where(eq(transactions.id, id));
 }
 async function deleteTransaction(id) {
-  await getDb().delete(transactions).where(eq(transactions.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(transactions).where(eq(transactions.id, id));
 }
 async function findPartiesByTransactionId(transactionId) {
-  return getDb().select().from(transactionParties).where(eq(transactionParties.transactionId, transactionId));
+  const db = getDb();
+  if (!db) return [];
+  return db.select().from(transactionParties).where(eq(transactionParties.transactionId, transactionId));
 }
 async function createParty(data) {
-  return getDb().insert(transactionParties).values(data);
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(transactionParties).values(data);
 }
 async function deleteParty(id) {
-  await getDb().delete(transactionParties).where(eq(transactionParties.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(transactionParties).where(eq(transactionParties.id, id));
 }
 async function findMilestonesByTransactionId(transactionId) {
-  return getDb().select().from(milestones).where(eq(milestones.transactionId, transactionId)).orderBy(milestones.createdAt);
+  const db = getDb();
+  if (!db) return [];
+  return db.select().from(milestones).where(eq(milestones.transactionId, transactionId)).orderBy(milestones.createdAt);
 }
 async function createMilestone(data) {
-  return getDb().insert(milestones).values(data);
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(milestones).values(data);
 }
 async function updateMilestone(id, data) {
-  await getDb().update(milestones).set(data).where(eq(milestones.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(milestones).set(data).where(eq(milestones.id, id));
 }
 async function deleteMilestone(id) {
-  await getDb().delete(milestones).where(eq(milestones.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(milestones).where(eq(milestones.id, id));
 }
 async function findExpensesByTransactionId(transactionId) {
-  return getDb().select().from(expenses).where(eq(expenses.transactionId, transactionId));
+  const db = getDb();
+  if (!db) return [];
+  return db.select().from(expenses).where(eq(expenses.transactionId, transactionId));
 }
 async function createExpense(data) {
-  return getDb().insert(expenses).values(data);
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(expenses).values(data);
 }
 async function updateExpense(id, data) {
-  await getDb().update(expenses).set(data).where(eq(expenses.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(expenses).set(data).where(eq(expenses.id, id));
 }
 async function deleteExpense(id) {
-  await getDb().delete(expenses).where(eq(expenses.id, id));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(expenses).where(eq(expenses.id, id));
 }
 
 // api/transaction-router.ts
@@ -47177,14 +47249,20 @@ var transactionRouter = createRouter({
 
 // api/queries/chatMessages.ts
 async function findChatMessagesByUserId(userId, limit = 50) {
-  const messages = await getDb().select().from(chatMessages).where(eq(chatMessages.userId, userId)).orderBy(desc(chatMessages.createdAt)).limit(limit);
+  const db = getDb();
+  if (!db) return [];
+  const messages = await db.select().from(chatMessages).where(eq(chatMessages.userId, userId)).orderBy(desc(chatMessages.createdAt)).limit(limit);
   return messages.reverse();
 }
 async function createChatMessage(data) {
-  return getDb().insert(chatMessages).values(data);
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(chatMessages).values(data);
 }
 async function deleteChatMessagesByUserId(userId) {
-  await getDb().delete(chatMessages).where(eq(chatMessages.userId, userId));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(chatMessages).where(eq(chatMessages.userId, userId));
 }
 
 // api/ai-router.ts

@@ -6,7 +6,9 @@ import type { InferInsertModel } from "drizzle-orm";
 export type InsertChatMessage = InferInsertModel<typeof chatMessages>;
 
 export async function findChatMessagesByUserId(userId: number, limit = 50) {
-  const messages = await getDb()
+  const db = getDb();
+  if (!db) return [];
+  const messages = await db
     .select()
     .from(chatMessages)
     .where(eq(chatMessages.userId, userId))
@@ -16,9 +18,13 @@ export async function findChatMessagesByUserId(userId: number, limit = 50) {
 }
 
 export async function createChatMessage(data: InsertChatMessage) {
-  return getDb().insert(chatMessages).values(data);
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(chatMessages).values(data);
 }
 
 export async function deleteChatMessagesByUserId(userId: number) {
-  await getDb().delete(chatMessages).where(eq(chatMessages.userId, userId));
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(chatMessages).where(eq(chatMessages.userId, userId));
 }

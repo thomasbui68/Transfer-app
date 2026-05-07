@@ -8,12 +8,18 @@ const fullSchema = { ...schema, ...relations };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let instance: any;
 let connectionError: string | null = null;
+let hasAttempted = false;
 
 export function getDb() {
+  if (hasAttempted && !instance) {
+    return null;
+  }
   if (!instance) {
+    hasAttempted = true;
     if (!env.databaseUrl) {
       connectionError = "DATABASE_URL not configured";
-      throw new Error(connectionError);
+      console.warn("[DB] " + connectionError);
+      return null;
     }
     try {
       instance = drizzle(env.databaseUrl, {
@@ -22,7 +28,8 @@ export function getDb() {
       });
     } catch (err) {
       connectionError = err instanceof Error ? err.message : "Unknown DB error";
-      throw new Error(connectionError);
+      console.error("[DB] Connection failed:", connectionError);
+      return null;
     }
   }
   return instance;
