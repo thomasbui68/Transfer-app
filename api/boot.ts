@@ -34,6 +34,28 @@ app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
 export default app;
 
+// Auto-migrate database on startup
+async function runMigrations() {
+  try {
+    const db = await import("./queries/connection").then(m => m.getDb());
+    if (!db) {
+      console.log("[DB] No database configured, skipping migration");
+      return;
+    }
+    // Push schema to database
+    const { spawn } = await import("child_process");
+    const child = spawn("npx", ["drizzle-kit", "push", "--force"], {
+      stdio: "inherit",
+      cwd: process.cwd(),
+    });
+    child.on("exit", (code) => {
+      console.log(`[DB] Migration exited with code ${code}`);
+    });
+  } catch (err) {
+    console.error("[DB] Migration failed:", err);
+  }
+}
+
 if (env.isProduction) {
   const { serve } = await import("@hono/node-server");
   const { serveStaticFiles } = await import("./lib/vite");
@@ -44,5 +66,7 @@ if (env.isProduction) {
     console.log(`Server running on port ${port}`);
     console.log(`Database URL configured: ${!!env.databaseUrl}`);
     console.log(`AI configured: ${!!env.anthropicApiKey}`);
+    // Run migrations in background
+    runMigrations();
   });
 }
