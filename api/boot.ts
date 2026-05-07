@@ -11,6 +11,16 @@ import { Paths } from "@contracts/constants";
 const app = new Hono<{ Bindings: HttpBindings }>();
 
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
+
+// Health check - always works even if DB is down
+app.get("/health", (c) => c.json({
+  ok: true,
+  ts: Date.now(),
+  env: env.isProduction ? "production" : "development",
+  dbConfigured: !!env.databaseUrl,
+  aiConfigured: !!env.anthropicApiKey,
+}));
+
 app.get(Paths.oauthCallback, createOAuthCallbackHandler());
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
@@ -31,6 +41,8 @@ if (env.isProduction) {
 
   const port = parseInt(process.env.PORT || "3000");
   serve({ fetch: app.fetch, port }, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+    console.log(`Server running on port ${port}`);
+    console.log(`Database URL configured: ${!!env.databaseUrl}`);
+    console.log(`AI configured: ${!!env.anthropicApiKey}`);
   });
 }

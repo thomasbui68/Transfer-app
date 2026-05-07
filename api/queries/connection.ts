@@ -5,14 +5,29 @@ import * as relations from "@db/relations";
 
 const fullSchema = { ...schema, ...relations };
 
-let instance: ReturnType<typeof drizzle<typeof fullSchema>>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let instance: any;
+let connectionError: string | null = null;
 
 export function getDb() {
   if (!instance) {
-    instance = drizzle(env.databaseUrl, {
-      mode: "planetscale",
-      schema: fullSchema,
-    });
+    if (!env.databaseUrl) {
+      connectionError = "DATABASE_URL not configured";
+      throw new Error(connectionError);
+    }
+    try {
+      instance = drizzle(env.databaseUrl, {
+        mode: "default",
+        schema: fullSchema,
+      });
+    } catch (err) {
+      connectionError = err instanceof Error ? err.message : "Unknown DB error";
+      throw new Error(connectionError);
+    }
   }
   return instance;
+}
+
+export function getDbStatus() {
+  return { connected: !!instance, error: connectionError };
 }

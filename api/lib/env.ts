@@ -1,20 +1,16 @@
 import "dotenv/config";
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value && process.env.NODE_ENV === "production") {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value ?? "";
+function getEnv(name: string): string {
+  return process.env[name] ?? "";
 }
 
 export const env = {
-  appId: required("APP_ID"),
-  appSecret: required("APP_SECRET"),
+  appId: getEnv("APP_ID"),
+  appSecret: getEnv("APP_SECRET"),
   isProduction: process.env.NODE_ENV === "production",
-  databaseUrl: required("DATABASE_URL"),
-  kimiAuthUrl: required("KIMI_AUTH_URL"),
-  kimiOpenUrl: required("KIMI_OPEN_URL"),
-  ownerUnionId: process.env.OWNER_UNION_ID ?? "",
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  databaseUrl: getEnv("DATABASE_URL"),
+  kimiAuthUrl: getEnv("KIMI_AUTH_URL") || "https://auth.kimi.com",
+  kimiOpenUrl: getEnv("KIMI_OPEN_URL") || "https://open.kimi.com",
+  ownerUnionId: getEnv("OWNER_UNION_ID"),
+  anthropicApiKey: getEnv("ANTHROPIC_API_KEY"),
 };
