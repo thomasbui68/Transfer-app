@@ -28,7 +28,7 @@ app.get("/api/oauth/authorize", (c) => {
   const state = c.req.query("state") || btoa(redirectUri);
 
   const authUrl = new URL(env.kimiAuthUrl || "https://auth.kimi.com");
-  authUrl.pathname = "/oauth/authorize";
+  authUrl.pathname = "/api/oauth/authorize";
   authUrl.searchParams.set("client_id", clientId);
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("response_type", "code");
