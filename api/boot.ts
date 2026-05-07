@@ -12,7 +12,7 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
-// Health check - always works even if DB is down
+// Health check
 app.get("/health", (c) => c.json({
   ok: true,
   ts: Date.now(),
@@ -24,10 +24,10 @@ app.get("/health", (c) => c.json({
 // OAuth authorize - redirects to Kimi login
 app.get("/api/oauth/authorize", (c) => {
   const clientId = c.req.query("client_id") || env.appId;
-  const redirectUri = c.req.query("redirect_uri") || `${c.req.header("origin") || env.kimiAuthUrl}/api/oauth/callback`;
+  const redirectUri = c.req.query("redirect_uri") || `${c.req.header("origin") || "https://transfer-app-production.up.railway.app"}/api/oauth/callback`;
   const state = c.req.query("state") || btoa(redirectUri);
 
-  const authUrl = new URL(env.kimiAuthUrl);
+  const authUrl = new URL(env.kimiAuthUrl || "https://auth.kimi.com");
   authUrl.pathname = "/oauth/authorize";
   authUrl.searchParams.set("client_id", clientId);
   authUrl.searchParams.set("redirect_uri", redirectUri);
@@ -38,7 +38,10 @@ app.get("/api/oauth/authorize", (c) => {
   return c.redirect(authUrl.toString(), 302);
 });
 
+// OAuth callback
 app.get(Paths.oauthCallback, createOAuthCallbackHandler());
+
+// tRPC API
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",
@@ -47,6 +50,8 @@ app.use("/api/trpc/*", async (c) => {
     createContext,
   });
 });
+
+// Generic API 404 - must be AFTER specific API routes
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
 export default app;

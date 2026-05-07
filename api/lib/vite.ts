@@ -10,41 +10,50 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 type App = Hono<{ Bindings: HttpBindings }>;
 
 function findDistPath(): string | null {
-  // Try multiple possible locations for dist/public
   const candidates = [
-    path.resolve(__dirname, "../../dist/public"),     // dev: api/lib -> root/dist/public
-    path.resolve(__dirname, "../dist/public"),         // bundled at root
-    path.resolve(__dirname, "dist/public"),            // same dir
-    path.resolve(process.cwd(), "dist/public"),         // Railway working dir
-    path.resolve("/app/dist/public"),                  // Docker common path
+    path.resolve(__dirname, "../../dist/public"),
+    path.resolve(__dirname, "../dist/public"),
+    path.resolve(__dirname, "dist/public"),
+    path.resolve(process.cwd(), "dist/public"),
+    path.resolve("/app/dist/public"),
   ];
-  
+
   for (const candidate of candidates) {
     if (fs.existsSync(path.join(candidate, "index.html"))) {
-      console.log(`Found frontend at: ${candidate}`);
+      console.log(`[Static] Found frontend at: ${candidate}`);
       return candidate;
     }
   }
-  
-  console.error("Could not find dist/public with index.html");
-  console.error("Tried:", candidates);
+
+  console.error("[Static] Could not find dist/public with index.html");
   return null;
 }
 
 export function serveStaticFiles(app: App) {
   const distPath = findDistPath();
-  
+
   if (!distPath) {
-    // No frontend built - return error for all routes
     app.use("*", (c) => c.json({ error: "Frontend not built" }, 500));
     return;
   }
 
-  app.use("*", serveStatic({ root: distPath }));
+  // Serve static files - skip API routes
+  app.use("*", async (c, next) => {
+    const path = c.req.path;
+    // Don't serve static files for API routes
+    if (path.startsWith("/api/") || path.startsWith("/health")) {
+      return await next();
+    }
+    // For all other routes, try to serve a static file
+    const staticHandler = serveStatic({ root: distPath });
+    return await staticHandler(c, next);
+  });
 
+  // Fallback: serve index.html for SPA routes
   app.notFound((c) => {
-    const accept = c.req.header("accept") ?? "";
-    if (!accept.includes("text/html")) {
+    const reqPath = c.req.path;
+    // Don't serve index.html for API routes
+    if (reqPath.startsWith("/api/")) {
       return c.json({ error: "Not Found" }, 404);
     }
     const indexPath = path.resolve(distPath, "index.html");
