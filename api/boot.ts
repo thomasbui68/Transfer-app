@@ -21,6 +21,23 @@ app.get("/health", (c) => c.json({
   aiConfigured: !!env.anthropicApiKey,
 }));
 
+// OAuth authorize - redirects to Kimi login
+app.get("/api/oauth/authorize", (c) => {
+  const clientId = c.req.query("client_id") || env.appId;
+  const redirectUri = c.req.query("redirect_uri") || `${c.req.header("origin") || env.kimiAuthUrl}/api/oauth/callback`;
+  const state = c.req.query("state") || btoa(redirectUri);
+
+  const authUrl = new URL(env.kimiAuthUrl);
+  authUrl.pathname = "/oauth/authorize";
+  authUrl.searchParams.set("client_id", clientId);
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("scope", "profile");
+  authUrl.searchParams.set("state", state);
+
+  return c.redirect(authUrl.toString(), 302);
+});
+
 app.get(Paths.oauthCallback, createOAuthCallbackHandler());
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
@@ -42,7 +59,6 @@ async function runMigrations() {
       console.log("[DB] No database configured, skipping migration");
       return;
     }
-    // Push schema to database
     const { spawn } = await import("child_process");
     const child = spawn("npx", ["drizzle-kit", "push", "--force"], {
       stdio: "inherit",
@@ -66,7 +82,6 @@ if (env.isProduction) {
     console.log(`Server running on port ${port}`);
     console.log(`Database URL configured: ${!!env.databaseUrl}`);
     console.log(`AI configured: ${!!env.anthropicApiKey}`);
-    // Run migrations in background
     runMigrations();
   });
 }
