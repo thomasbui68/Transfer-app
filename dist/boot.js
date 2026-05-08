@@ -36526,7 +36526,7 @@ var authRouter = createRouter({
       cookie.serialize(Session.cookieName, "", {
         httpOnly: opts.httpOnly,
         path: opts.path,
-        sameSite: opts.sameSite?.toLowerCase(),
+        sameSite: opts.sameSite ?? "lax",
         secure: opts.secure,
         maxAge: 0
       })
@@ -50611,6 +50611,105 @@ var transactionRouter = createRouter({
   })
 });
 
+// api/queries/documents.ts
+init_drizzle_orm();
+init_connection();
+init_schema2();
+async function findDocumentsByTransactionId(transactionId) {
+  const db = getDb();
+  if (!db) return [];
+  return db.select().from(documents).where(eq(documents.transactionId, transactionId)).orderBy(desc(documents.createdAt));
+}
+async function findDocumentById(id) {
+  const db = getDb();
+  if (!db) return void 0;
+  const rows = await db.select().from(documents).where(eq(documents.id, id)).limit(1);
+  return rows[0];
+}
+async function createDocument(data) {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(documents).values(data);
+}
+async function updateDocument(id, data) {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(documents).set(data).where(eq(documents.id, id));
+}
+async function deleteDocument(id) {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(documents).where(eq(documents.id, id));
+}
+
+// api/document-router.ts
+var documentRouter = createRouter({
+  list: publicQuery.input(external_exports.object({ transactionId: external_exports.number() })).query(async ({ input }) => {
+    return findDocumentsByTransactionId(input.transactionId);
+  }),
+  byId: publicQuery.input(external_exports.object({ id: external_exports.number() })).query(async ({ input }) => {
+    return findDocumentById(input.id);
+  }),
+  create: authedQuery.input(
+    external_exports.object({
+      transactionId: external_exports.number(),
+      filename: external_exports.string().min(1),
+      originalName: external_exports.string().min(1),
+      mimeType: external_exports.string().min(1),
+      size: external_exports.number(),
+      category: external_exports.enum([
+        "contract",
+        "search",
+        "enquiry",
+        "id_proof",
+        "address_proof",
+        "mortgage",
+        "survey",
+        "correspondence",
+        "other"
+      ]),
+      isSignatureRequired: external_exports.boolean().optional(),
+      notes: external_exports.string().optional()
+    })
+  ).mutation(async ({ input, ctx }) => {
+    return createDocument({
+      ...input,
+      uploadedById: ctx.user.id
+    });
+  }),
+  update: authedQuery.input(
+    external_exports.object({
+      id: external_exports.number(),
+      data: external_exports.object({
+        category: external_exports.enum([
+          "contract",
+          "search",
+          "enquiry",
+          "id_proof",
+          "address_proof",
+          "mortgage",
+          "survey",
+          "correspondence",
+          "other"
+        ]).optional(),
+        isSignatureRequired: external_exports.boolean().optional(),
+        notes: external_exports.string().optional()
+      })
+    })
+  ).mutation(async ({ input }) => {
+    return updateDocument(input.id, input.data);
+  }),
+  sign: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
+    return updateDocument(input.id, {
+      isSigned: true,
+      signedAt: /* @__PURE__ */ new Date()
+    });
+  }),
+  delete: authedQuery.input(external_exports.object({ id: external_exports.number() })).mutation(async ({ input }) => {
+    return deleteDocument(input.id);
+  })
+});
+
 // api/queries/chatMessages.ts
 init_drizzle_orm();
 init_connection();
@@ -50692,6 +50791,7 @@ var appRouter = createRouter({
   auth: authRouter,
   property: propertyRouter,
   transaction: transactionRouter,
+  document: documentRouter,
   ai: aiRouter
 });
 
@@ -50748,10 +50848,14 @@ init_schema2();
 init_connection();
 init_env();
 async function findUserByUnionId(unionId) {
-  const rows = await getDb().select().from(users).where(eq(users.unionId, unionId)).limit(1);
+  const db = getDb();
+  if (!db) return void 0;
+  const rows = await db.select().from(users).where(eq(users.unionId, unionId)).limit(1);
   return rows.at(0);
 }
 async function upsertUser(data) {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
   const values = { ...data };
   const updateSet = {
     lastSignInAt: /* @__PURE__ */ new Date(),
@@ -50761,7 +50865,7 @@ async function upsertUser(data) {
     values.role = "admin";
     updateSet.role = "admin";
   }
-  await getDb().insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
 
 // api/kimi/auth.ts

@@ -1,6 +1,7 @@
 import { authRouter } from "./auth-router";
 import { propertyRouter } from "./property-router";
 import { transactionRouter } from "./transaction-router";
+import { documentRouter } from "./document-router";
 import { aiRouter } from "./ai-router";
 import { createRouter, publicQuery } from "./middleware";
 import { getDbStatus } from "./queries/connection";
@@ -17,6 +18,7 @@ export const appRouter = createRouter({
   auth: authRouter,
   property: propertyRouter,
   transaction: transactionRouter,
+  document: documentRouter,
   ai: aiRouter,
 });
 

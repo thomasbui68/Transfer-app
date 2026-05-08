@@ -12,7 +12,7 @@ export const authRouter = createRouter({
       cookie.serialize(Session.cookieName, "", {
         httpOnly: opts.httpOnly,
         path: opts.path,
-        sameSite: opts.sameSite?.toLowerCase() as "lax" | "none",
+        sameSite: (opts.sameSite as "lax" | "none" | undefined) ?? "lax",
         secure: opts.secure,
         maxAge: 0,
       }),
