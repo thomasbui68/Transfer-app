@@ -1,6 +1,5 @@
 import type { Hono } from "hono";
 import type { HttpBindings } from "@hono/node-server";
-import { serveStatic } from "@hono/node-server/serve-static";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -20,12 +19,9 @@ function findDistPath(): string | null {
 
   for (const candidate of candidates) {
     if (fs.existsSync(path.join(candidate, "index.html"))) {
-      console.log(`[Static] Found frontend at: ${candidate}`);
       return candidate;
     }
   }
-
-  console.error("[Static] Could not find dist/public with index.html");
   return null;
 }
 
@@ -33,30 +29,47 @@ export function serveStaticFiles(app: App) {
   const distPath = findDistPath();
 
   if (!distPath) {
-    app.use("*", (c) => c.json({ error: "Frontend not built" }, 500));
+    app.notFound((c) => c.json({ error: "Frontend not built" }, 500));
     return;
   }
 
-  // Serve static files - skip API routes
-  app.use("*", async (c, next) => {
-    const path = c.req.path;
-    // Don't serve static files for API routes
-    if (path.startsWith("/api/") || path.startsWith("/health")) {
-      return await next();
+  // Serve static assets (JS, CSS, images) from dist/public
+  app.use("/assets/*", async (c, next) => {
+    const filePath = path.join(distPath, c.req.path);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const ext = path.extname(filePath);
+      const mimeTypes: Record<string, string> = {
+        ".js": "application/javascript",
+        ".css": "text/css",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".svg": "image/svg+xml",
+        ".ico": "image/x-icon",
+      };
+      const content = fs.readFileSync(filePath);
+      return c.body(content, 200, { "Content-Type": mimeTypes[ext] || "application/octet-stream" });
     }
-    // For all other routes, try to serve a static file
-    const staticHandler = serveStatic({ root: distPath });
-    return await staticHandler(c, next);
+    return await next();
   });
 
-  // Fallback: serve index.html for SPA routes
+  // Serve favicon and other root-level static files
+  app.use("/*.ico", async (c, next) => {
+    const filePath = path.join(distPath, c.req.path);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const content = fs.readFileSync(filePath);
+      return c.body(content, 200, { "Content-Type": "image/x-icon" });
+    }
+    return await next();
+  });
+
+  // SPA fallback: serve index.html for all non-API routes
   app.notFound((c) => {
     const reqPath = c.req.path;
     // Don't serve index.html for API routes
-    if (reqPath.startsWith("/api/")) {
+    if (reqPath.startsWith("/api/") || reqPath === "/health") {
       return c.json({ error: "Not Found" }, 404);
     }
-    const indexPath = path.resolve(distPath, "index.html");
+    const indexPath = path.join(distPath, "index.html");
     const content = fs.readFileSync(indexPath, "utf-8");
     return c.html(content);
   });
