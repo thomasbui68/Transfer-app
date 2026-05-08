@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Home, Building2, FileText, Bot, Settings, LogOut, LogIn, Menu, User, ChevronRight, Shield, Sparkles } from "lucide-react";
 
 const navItems = [
@@ -37,7 +38,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-6 py-5 border-b">
+      <div className="flex items-center gap-3 px-6 py-5 border-b flex-shrink-0">
         <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center">
           <Shield className="w-5 h-5 text-white" />
         </div>
@@ -46,20 +47,22 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <p className="text-xs text-gray-500">UK Property Transactions</p>
         </div>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => {
-          const active = isActive(item.path);
-          return (
-            <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? "bg-emerald-50 text-emerald-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
-              <item.icon className={`w-4 h-4 ${active ? "text-emerald-600" : "text-gray-400"}`} />
-              {item.label}
-              {active && <ChevronRight className="w-4 h-4 ml-auto text-emerald-500" />}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="px-3 py-4 border-t">
+      <ScrollArea className="flex-1">
+        <nav className="px-3 py-4 space-y-1">
+          {navItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <Link key={item.path} to={item.path} onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? "bg-emerald-50 text-emerald-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
+                <item.icon className={`w-4 h-4 ${active ? "text-emerald-600" : "text-gray-400"}`} />
+                {item.label}
+                {active && <ChevronRight className="w-4 h-4 ml-auto text-emerald-500" />}
+              </Link>
+            );
+          })}
+        </nav>
+      </ScrollArea>
+      <div className="px-3 py-4 border-t flex-shrink-0">
         {isLoading ? (
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/providers/trpc";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router";
-import { FileText, Plus, ArrowRight, Search, Filter, AlertCircle } from "lucide-react";
+import { FileText, Plus, ArrowRight, Search, Filter, AlertCircle, LogIn } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Transactions() {
+  const { isAuthenticated } = useAuth();
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -28,6 +30,7 @@ export default function Transactions() {
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!isAuthenticated) { toast.error("Please sign in to create a transaction"); return; }
     const f = new FormData(e.currentTarget);
     if (!txType) { toast.error("Please select a transaction type"); return; }
     if (!propertyId) { toast.error("Please select a property"); return; }
@@ -71,6 +74,15 @@ export default function Transactions() {
           <DialogTrigger asChild><Button className="bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4 mr-2" /> New Transaction</Button></DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[100]">
             <DialogHeader><DialogTitle>Create New Transaction</DialogTitle></DialogHeader>
+            {!isAuthenticated ? (
+              <div className="text-center py-6 space-y-4">
+                <LogIn className="w-12 h-12 mx-auto text-gray-300" />
+                <p className="text-gray-500">Please sign in to create a transaction</p>
+                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => window.location.href = "/api/demo-login"}>
+                  <Plus className="w-4 h-4 mr-2" /> Try Demo Login
+                </Button>
+              </div>
+            ) : (
             <form onSubmit={handleCreate} className="space-y-4">
               <div><Label htmlFor="tx-title">Title *</Label><Input id="tx-title" name="title" required placeholder="e.g., 123 High Street Purchase" /></div>
               <div><Label htmlFor="tx-type">Type *</Label>
@@ -108,6 +120,7 @@ export default function Transactions() {
                 {createTx.isPending ? "Creating..." : "Create Transaction"}
               </Button>
             </form>
+            )}
           </DialogContent>
         </Dialog>
       </div>
