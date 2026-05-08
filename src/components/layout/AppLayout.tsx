@@ -104,14 +104,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetTrigger asChild>
-          <button className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-sm border">
-            <Menu className="w-5 h-5 text-gray-600" />
+          <button className="lg:hidden fixed top-3 left-3 z-50 p-1.5 bg-white rounded-md shadow-sm border">
+            <Menu className="w-4 h-4 text-gray-600" />
           </button>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0"><SidebarContent /></SheetContent>
       </Sheet>
       <main className="flex-1 overflow-y-auto">
-        <div className="p-4 lg:p-8 max-w-7xl mx-auto">{children}</div>
+        <div className="p-4 pl-14 lg:pl-8 max-w-7xl mx-auto">{children}</div>
       </main>
     </div>
   );
