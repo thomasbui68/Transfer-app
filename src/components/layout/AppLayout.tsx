@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Home, Building2, FileText, Bot, Settings, LogOut, LogIn, Menu, User, ChevronRight, Shield } from "lucide-react";
+import { Home, Building2, FileText, Bot, Settings, LogOut, LogIn, Menu, User, ChevronRight, Shield, Sparkles } from "lucide-react";
 
 const navItems = [
   { icon: Home, label: "Dashboard", path: "/" },
@@ -23,8 +23,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return location.pathname.startsWith(path);
   };
 
-  const loginUrl = `/api/oauth/authorize?client_id=${import.meta.env.VITE_APP_ID}&redirect_uri=${encodeURIComponent(`${window.location.origin}/api/oauth/callback`)}&response_type=code&scope=profile&state=${btoa(`${window.location.origin}/api/oauth/callback`)}`;
-  const demoLoginUrl = `/api/demo-login`;
+  const handleDemoLogin = () => {
+    window.location.href = "/api/demo-login";
+  };
+
+  const handleKimiLogin = () => {
+    const redirectUri = `${window.location.origin}/api/oauth/callback`;
+    const state = btoa(redirectUri);
+    const clientId = import.meta.env.VITE_APP_ID;
+    const url = `/api/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=profile&state=${state}`;
+    window.location.href = url;
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -73,16 +82,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         ) : (
           <div className="space-y-2">
-            <a href={demoLoginUrl}>
-              <Button variant="default" size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700">
-                <LogIn className="w-4 h-4 mr-2" /> Try Demo (No Sign-up)
-              </Button>
-            </a>
-            <a href={loginUrl}>
-              <Button variant="outline" size="sm" className="w-full">
-                Sign in with Kimi
-              </Button>
-            </a>
+            <Button variant="default" size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={handleDemoLogin}>
+              <Sparkles className="w-4 h-4 mr-2" /> Try Demo (No Sign-up)
+            </Button>
+            <Button variant="outline" size="sm" className="w-full" onClick={handleKimiLogin}>
+              <LogIn className="w-4 h-4 mr-2" /> Sign in with Kimi
+            </Button>
           </div>
         )}
       </div>

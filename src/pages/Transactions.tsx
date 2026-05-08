@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router";
-import { FileText, Plus, ArrowRight, Search, Filter } from "lucide-react";
+import { FileText, Plus, ArrowRight, Search, Filter, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Transactions() {
@@ -29,10 +29,8 @@ export default function Transactions() {
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    if (!txType || !propertyId) {
-      toast.error("Please select transaction type and property");
-      return;
-    }
+    if (!txType) { toast.error("Please select a transaction type"); return; }
+    if (!propertyId) { toast.error("Please select a property"); return; }
     createTx.mutate({
       reference: `TX-${Date.now()}`,
       title: f.get("title") as string,
@@ -63,30 +61,52 @@ export default function Transactions() {
     completion: "bg-emerald-100 text-emerald-700", archived: "bg-gray-100 text-gray-500",
   };
 
+  const hasProperties = properties && properties.length > 0;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold text-gray-900">Transactions</h1><p className="text-gray-500 mt-1">Manage all your property transactions</p></div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4 mr-2" /> New Transaction</Button></DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[100]">
             <DialogHeader><DialogTitle>Create New Transaction</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div><Label>Title *</Label><Input name="title" required placeholder="e.g., 123 High Street Purchase" /></div>
-              <div><Label>Type *</Label>
-                <Select value={txType} onValueChange={setTxType} required>
-                  <SelectTrigger id="type"><SelectValue placeholder="Select type" /></SelectTrigger>
-                  <SelectContent><SelectItem value="purchase">Purchase</SelectItem><SelectItem value="sale">Sale</SelectItem><SelectItem value="remortgage">Remortgage</SelectItem><SelectItem value="transfer">Transfer</SelectItem></SelectContent>
-                </Select></div>
-              <div><Label>Property *</Label>
-                <Select value={propertyId} onValueChange={setPropertyId} required>
-                  <SelectTrigger id="propertyId"><SelectValue placeholder="Select property" /></SelectTrigger>
-                  <SelectContent>{properties?.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.address}</SelectItem>)}</SelectContent>
-                </Select></div>
-              <div><Label>Agreed Price (&pound;) *</Label><Input name="agreedPrice" type="number" required placeholder="450000" /></div>
-              <div><Label>Deposit (&pound;)</Label><Input name="depositAmount" type="number" placeholder="45000" /></div>
-              <div><Label>Mortgage Lender</Label><Input name="mortgageLender" placeholder="e.g., Halifax" /></div>
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={createTx.isPending}>{createTx.isPending ? "Creating..." : "Create Transaction"}</Button>
+              <div><Label htmlFor="tx-title">Title *</Label><Input id="tx-title" name="title" required placeholder="e.g., 123 High Street Purchase" /></div>
+              <div><Label htmlFor="tx-type">Type *</Label>
+                <Select value={txType} onValueChange={setTxType}>
+                  <SelectTrigger id="tx-type"><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="purchase">Purchase</SelectItem>
+                    <SelectItem value="sale">Sale</SelectItem>
+                    <SelectItem value="remortgage">Remortgage</SelectItem>
+                    <SelectItem value="transfer">Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="tx-property">Property *</Label>
+                {!hasProperties ? (
+                  <div className="flex items-center gap-2 p-3 rounded-md border border-amber-200 bg-amber-50 text-amber-800 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>No properties yet.</span>
+                    <Link to="/properties" className="underline font-medium" onClick={() => setOpen(false)}>Add one first &rarr;</Link>
+                  </div>
+                ) : (
+                  <Select value={propertyId} onValueChange={setPropertyId}>
+                    <SelectTrigger id="tx-property"><SelectValue placeholder="Select property" /></SelectTrigger>
+                    <SelectContent>
+                      {properties.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.address}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              <div><Label htmlFor="tx-price">Agreed Price (&pound;) *</Label><Input id="tx-price" name="agreedPrice" type="number" required placeholder="450000" /></div>
+              <div><Label htmlFor="tx-deposit">Deposit (&pound;)</Label><Input id="tx-deposit" name="depositAmount" type="number" placeholder="45000" /></div>
+              <div><Label htmlFor="tx-lender">Mortgage Lender</Label><Input id="tx-lender" name="mortgageLender" placeholder="e.g., Halifax" /></div>
+              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={createTx.isPending || !hasProperties}>
+                {createTx.isPending ? "Creating..." : "Create Transaction"}
+              </Button>
             </form>
           </DialogContent>
         </Dialog>

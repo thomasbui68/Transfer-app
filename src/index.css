@@ -73,3 +73,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Fix Select/Popover dropdown z-index inside Dialogs */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+
+[data-radix-select-viewport] {
+  max-height: 300px;
+}
+
+/* Ensure mobile sheet doesn't clip content */
+[data-state="open"] [data-radix-popper-content-wrapper] {
+  z-index: 99999 !important;
+}
