@@ -7,15 +7,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, Search, Plus, MapPin, Bed, Bath, LogIn } from "lucide-react";
 import { toast } from "sonner";
+
+const PROPERTY_TYPES = [
+  { value: "freehold", label: "Freehold" },
+  { value: "leasehold", label: "Leasehold" },
+  { value: "share_of_freehold", label: "Share of Freehold" },
+  { value: "commonhold", label: "Commonhold" },
+];
 
 export default function Properties() {
   const { isAuthenticated } = useAuth();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const [propertyType, setPropertyType] = useState<string>("");
+  const [propertyType, setPropertyType] = useState("");
   const utils = trpc.useUtils();
   const { data: properties, isLoading } = trpc.property.list.useQuery(search ? { search } : { search: undefined });
 
@@ -54,11 +60,20 @@ export default function Properties() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold text-gray-900">Properties</h1><p className="text-gray-500 mt-1">Manage your UK property portfolio</p></div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Properties</h1>
+          <p className="text-gray-500 mt-1">Manage your UK property portfolio</p>
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="bg-emerald-600 hover:bg-emerald-700"><Plus className="w-4 h-4 mr-2" /> Add Property</Button></DialogTrigger>
+          <DialogTrigger asChild>
+            <Button className="bg-emerald-600 hover:bg-emerald-700">
+              <Plus className="w-4 h-4 mr-2" /> Add Property
+            </Button>
+          </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Add New Property</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Add New Property</DialogTitle>
+            </DialogHeader>
             {!isAuthenticated ? (
               <div className="text-center py-6 space-y-4">
                 <LogIn className="w-12 h-12 mx-auto text-gray-300" />
@@ -69,62 +84,131 @@ export default function Properties() {
               </div>
             ) : (
               <form onSubmit={handleCreate} className="space-y-4">
-                <div><Label htmlFor="addr">Address *</Label><Input id="addr" name="address" required placeholder="123 High Street" /></div>
-                <div><Label htmlFor="pc">Postcode *</Label><Input id="pc" name="postcode" required placeholder="SW1A 1AA" /></div>
-                <div><Label htmlFor="pt">Property Type *</Label>
-                  <Select value={propertyType} onValueChange={setPropertyType}>
-                    <SelectTrigger id="pt"><SelectValue placeholder="Select type" /></SelectTrigger>
-                    <SelectContent><SelectItem value="freehold">Freehold</SelectItem><SelectItem value="leasehold">Leasehold</SelectItem><SelectItem value="share_of_freehold">Share of Freehold</SelectItem><SelectItem value="commonhold">Commonhold</SelectItem></SelectContent>
-                  </Select></div>
-                <div><Label htmlFor="pr">Price (&pound;) *</Label><Input id="pr" name="price" type="number" required placeholder="450000" /></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label htmlFor="bd">Bedrooms</Label><Input id="bd" name="bedrooms" type="number" placeholder="3" /></div>
-                  <div><Label htmlFor="bt">Bathrooms</Label><Input id="bt" name="bathrooms" type="number" placeholder="2" /></div>
+                <div>
+                  <Label htmlFor="p-addr">Address *</Label>
+                  <Input id="p-addr" name="address" required placeholder="123 High Street" />
                 </div>
-                <div><Label htmlFor="desc">Description</Label><Input id="desc" name="description" placeholder="Property description..." /></div>
-                <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={createProperty.isPending}>{createProperty.isPending ? "Creating..." : "Create Property"}</Button>
+                <div>
+                  <Label htmlFor="p-pc">Postcode *</Label>
+                  <Input id="p-pc" name="postcode" required placeholder="SW1A 1AA" />
+                </div>
+                <div>
+                  <Label htmlFor="p-type">Property Type *</Label>
+                  <select
+                    id="p-type"
+                    value={propertyType}
+                    onChange={(e) => setPropertyType(e.target.value)}
+                    required
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="">Select type...</option>
+                    {PROPERTY_TYPES.map(pt => (
+                      <option key={pt.value} value={pt.value}>{pt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="p-price">Price (&pound;) *</Label>
+                  <Input id="p-price" name="price" type="number" required placeholder="450000" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="p-bd">Bedrooms</Label>
+                    <Input id="p-bd" name="bedrooms" type="number" placeholder="3" />
+                  </div>
+                  <div>
+                    <Label htmlFor="p-bt">Bathrooms</Label>
+                    <Input id="p-bt" name="bathrooms" type="number" placeholder="2" />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="p-desc">Description</Label>
+                  <Input id="p-desc" name="description" placeholder="Property description..." />
+                </div>
+                <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={createProperty.isPending}>
+                  {createProperty.isPending ? "Creating..." : "Create Property"}
+                </Button>
               </form>
             )}
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <Input placeholder="Search by address..." className="pl-10" value={search} onChange={e => setSearch(e.target.value)} /></div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Input
+          placeholder="Search by address..."
+          className="pl-10"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => <Card key={i} className="animate-pulse"><CardContent className="p-6"><div className="h-4 bg-gray-200 rounded w-3/4 mb-3" /><div className="h-3 bg-gray-200 rounded w-1/2" /></CardContent></Card>)}
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
+                <div className="h-3 bg-gray-200 rounded w-1/2" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : !properties?.length ? (
-        <Card><CardContent className="text-center py-12">
-          <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p className="text-gray-500 mb-4">No properties found</p>
-          {!isAuthenticated && (
-            <Button className="bg-emerald-600 hover:bg-emerald-700 mb-2" onClick={() => window.location.href = "/api/demo-login"}>
-              <LogIn className="w-4 h-4 mr-2" /> Sign in to add properties
-            </Button>
-          )}
-          {isAuthenticated && (
-            <Button variant="link" className="text-emerald-600" onClick={() => setOpen(true)}>Add your first property</Button>
-          )}
-        </CardContent></Card>
+        <Card>
+          <CardContent className="text-center py-12">
+            <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p className="text-gray-500 mb-4">No properties found</p>
+            {!isAuthenticated && (
+              <Button className="bg-emerald-600 hover:bg-emerald-700 mb-2" onClick={() => window.location.href = "/api/demo-login"}>
+                <LogIn className="w-4 h-4 mr-2" /> Sign in to add properties
+              </Button>
+            )}
+            {isAuthenticated && (
+              <Button variant="link" className="text-emerald-600" onClick={() => setOpen(true)}>
+                Add your first property
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {properties.map(p => (
+          {properties.map((p) => (
             <Card key={p.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between mb-3">
-                  <Badge className={statusColors[p.status] || "bg-gray-100 text-gray-700"}>{p.status.replace("_", " ")}</Badge>
-                  <span className="text-lg font-bold text-gray-900">&pound;{Number(p.price).toLocaleString()}</span>
+                  <Badge className={statusColors[p.status] || "bg-gray-100 text-gray-700"}>
+                    {p.status.replace("_", " ")}
+                  </Badge>
+                  <span className="text-lg font-bold text-gray-900">
+                    &pound;{Number(p.price).toLocaleString()}
+                  </span>
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">{p.address}</h3>
-                <div className="flex items-center text-sm text-gray-500 mb-3"><MapPin className="w-3.5 h-3.5 mr-1" />{p.postcode}</div>
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                  {p.bedrooms && <span className="flex items-center gap-1"><Bed className="w-3.5 h-3.5" />{p.bedrooms} beds</span>}
-                  {p.bathrooms && <span className="flex items-center gap-1"><Bath className="w-3.5 h-3.5" />{p.bathrooms} baths</span>}
+                <div className="flex items-center text-sm text-gray-500 mb-3">
+                  <MapPin className="w-3.5 h-3.5 mr-1" />
+                  {p.postcode}
                 </div>
-                <div className="mt-3 pt-3 border-t"><span className="text-xs text-gray-400 capitalize">{p.propertyType.replace("_", " ")}</span></div>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  {p.bedrooms && (
+                    <span className="flex items-center gap-1">
+                      <Bed className="w-3.5 h-3.5" />
+                      {p.bedrooms} beds
+                    </span>
+                  )}
+                  {p.bathrooms && (
+                    <span className="flex items-center gap-1">
+                      <Bath className="w-3.5 h-3.5" />
+                      {p.bathrooms} baths
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t">
+                  <span className="text-xs text-gray-400 capitalize">
+                    {p.propertyType.replace("_", " ")}
+                  </span>
+                </div>
               </CardContent>
             </Card>
           ))}
