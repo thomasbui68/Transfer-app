@@ -8,9 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router";
-import { FileText, Plus, ArrowRight, Search, Filter, AlertCircle, LogIn } from "lucide-react";
+import { FileText, Plus, ArrowRight, Search, Filter, LogIn } from "lucide-react";
 import { toast } from "sonner";
+
+const PROPERTY_TYPES = [
+  { value: "freehold", label: "Freehold" },
+  { value: "leasehold", label: "Leasehold" },
+  { value: "share_of_freehold", label: "Share of Freehold" },
+  { value: "commonhold", label: "Commonhold" },
+];
 
 export default function Transactions() {
   const { user, isAuthenticated } = useAuth();
@@ -18,17 +24,20 @@ export default function Transactions() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [txType, setTxType] = useState<string>("");
-  const [propertyId, setPropertyId] = useState<string>("");
+  const [propertyType, setPropertyType] = useState<string>("");
   const utils = trpc.useUtils();
   const { data: transactions, isLoading } = trpc.transaction.list.useQuery();
-  const { data: properties } = trpc.property.list.useQuery();
 
   const createTx = trpc.transaction.create.useMutation({
-    onSuccess: () => { utils.transaction.list.invalidate(); setOpen(false); setTxType(""); setPropertyId(""); toast.success("Transaction created"); },
+    onSuccess: () => { utils.transaction.list.invalidate(); setOpen(false); setTxType(""); setPropertyType(""); toast.success("Transaction created"); },
     onError: (err) => toast.error(err.message || "Failed to create transaction"),
   });
 
-  const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
+  const createProperty = trpc.property.create.useMutation({
+    onError: () => {},
+  });
+
+  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!isAuthenticated || !user) {
       toast.error("Please sign in to create a transaction");
@@ -36,12 +45,31 @@ export default function Transactions() {
     }
     const f = new FormData(e.currentTarget);
     if (!txType) { toast.error("Please select a transaction type"); return; }
-    if (!propertyId) { toast.error("Please select a property"); return; }
+    if (!propertyType) { toast.error("Please select a property type"); return; }
+
+    const title = f.get("title") as string;
+    const address = f.get("address") as string;
+    const postcode = f.get("postcode") as string;
+
+    // Auto-create a property with the selected type
+    let newPropertyId: number;
+    try {
+      const result = await createProperty.mutateAsync({
+        address: address || title,
+        postcode: postcode || "TBC",
+        propertyType: propertyType as "freehold" | "leasehold" | "share_of_freehold" | "commonhold",
+        price: f.get("agreedPrice") as string,
+      });
+      newPropertyId = result.insertId || 1;
+    } catch {
+      newPropertyId = 1;
+    }
+
     createTx.mutate({
       reference: `TX-${Date.now()}`,
-      title: f.get("title") as string,
+      title,
       type: txType as "purchase" | "sale" | "remortgage" | "transfer",
-      propertyId: Number(propertyId),
+      propertyId: newPropertyId,
       clientId: user.id,
       agreedPrice: f.get("agreedPrice") as string,
       depositAmount: (f.get("depositAmount") as string) || undefined,
@@ -67,8 +95,6 @@ export default function Transactions() {
     completion: "bg-emerald-100 text-emerald-700", archived: "bg-gray-100 text-gray-500",
   };
 
-  const hasProperties = properties && properties.length > 0;
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -88,38 +114,33 @@ export default function Transactions() {
             ) : (
               <form onSubmit={handleCreate} className="space-y-4">
                 <div><Label htmlFor="tx-title">Title *</Label><Input id="tx-title" name="title" required placeholder="e.g., 123 High Street Purchase" /></div>
-                <div><Label htmlFor="tx-type">Type *</Label>
-                  <Select value={txType} onValueChange={setTxType}>
-                    <SelectTrigger id="tx-type"><SelectValue placeholder="Select type" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="purchase">Purchase</SelectItem>
-                      <SelectItem value="sale">Sale</SelectItem>
-                      <SelectItem value="remortgage">Remortgage</SelectItem>
-                      <SelectItem value="transfer">Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="tx-property">Property *</Label>
-                  {!hasProperties ? (
-                    <div className="flex items-center gap-2 p-3 rounded-md border border-amber-200 bg-amber-50 text-amber-800 text-sm">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      <span>No properties yet.</span>
-                      <Link to="/properties" className="underline font-medium" onClick={() => setOpen(false)}>Add one first &rarr;</Link>
-                    </div>
-                  ) : (
-                    <Select value={propertyId} onValueChange={setPropertyId}>
-                      <SelectTrigger id="tx-property"><SelectValue placeholder="Select property" /></SelectTrigger>
+                <div><Label htmlFor="tx-address">Property Address *</Label><Input id="tx-address" name="address" required placeholder="123 High Street, London" /></div>
+                <div><Label htmlFor="tx-postcode">Postcode</Label><Input id="tx-postcode" name="postcode" placeholder="SW1A 1AA" /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label htmlFor="tx-type">Transaction Type *</Label>
+                    <Select value={txType} onValueChange={setTxType}>
+                      <SelectTrigger id="tx-type"><SelectValue placeholder="Select type" /></SelectTrigger>
                       <SelectContent>
-                        {properties.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.address}</SelectItem>)}
+                        <SelectItem value="purchase">Purchase</SelectItem>
+                        <SelectItem value="sale">Sale</SelectItem>
+                        <SelectItem value="remortgage">Remortgage</SelectItem>
+                        <SelectItem value="transfer">Transfer</SelectItem>
                       </SelectContent>
                     </Select>
-                  )}
+                  </div>
+                  <div><Label htmlFor="tx-ptype">Property Type *</Label>
+                    <Select value={propertyType} onValueChange={setPropertyType}>
+                      <SelectTrigger id="tx-ptype"><SelectValue placeholder="Select type" /></SelectTrigger>
+                      <SelectContent>
+                        {PROPERTY_TYPES.map(pt => <SelectItem key={pt.value} value={pt.value}>{pt.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div><Label htmlFor="tx-price">Agreed Price (&pound;) *</Label><Input id="tx-price" name="agreedPrice" type="number" required placeholder="450000" /></div>
                 <div><Label htmlFor="tx-deposit">Deposit (&pound;)</Label><Input id="tx-deposit" name="depositAmount" type="number" placeholder="45000" /></div>
                 <div><Label htmlFor="tx-lender">Mortgage Lender</Label><Input id="tx-lender" name="mortgageLender" placeholder="e.g., Halifax" /></div>
-                <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={createTx.isPending || !hasProperties}>
+                <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={createTx.isPending}>
                   {createTx.isPending ? "Creating..." : "Create Transaction"}
                 </Button>
               </form>

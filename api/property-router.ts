@@ -19,9 +19,10 @@ export const propertyRouter = createRouter({
     price: z.string().or(z.number()), bedrooms: z.number().optional(),
     bathrooms: z.number().optional(), squareFootage: z.number().optional(),
     yearBuilt: z.number().optional(), description: z.string().optional(), notes: z.string().optional(),
-  })).mutation(async ({ input, ctx }) => ({
-    result: await createProperty({ ...input, price: String(input.price), createdById: ctx.user.id })
-  })),
+  })).mutation(async ({ input, ctx }) => {
+    const result = await createProperty({ ...input, price: String(input.price), createdById: ctx.user.id });
+    return { insertId: Number(result[0].insertId) };
+  }),
 
   update: authedQuery.input(z.object({
     id: z.number(), data: z.object({

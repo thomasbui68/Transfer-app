@@ -50361,9 +50361,10 @@ var propertyRouter = createRouter({
     yearBuilt: external_exports.number().optional(),
     description: external_exports.string().optional(),
     notes: external_exports.string().optional()
-  })).mutation(async ({ input, ctx }) => ({
-    result: await createProperty({ ...input, price: String(input.price), createdById: ctx.user.id })
-  })),
+  })).mutation(async ({ input, ctx }) => {
+    const result = await createProperty({ ...input, price: String(input.price), createdById: ctx.user.id });
+    return { insertId: Number(result[0].insertId) };
+  }),
   update: authedQuery.input(external_exports.object({
     id: external_exports.number(),
     data: external_exports.object({
