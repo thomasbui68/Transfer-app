@@ -25,7 +25,12 @@ export default function AIAssistant() {
   const utils = trpc.useUtils();
 
   const { data: history } = trpc.ai.history.useQuery(undefined, { enabled: isAuthenticated });
-  const chat = trpc.ai.chat.useMutation({ onSuccess: (d) => { setMessages(prev => [...prev, { role: "assistant", content: d.response }]); utils.ai.history.invalidate(); } });
+  const chat = trpc.ai.chat.useMutation({
+    onSuccess: (d) => { setMessages(prev => [...prev, { role: "assistant", content: d.response }]); utils.ai.history.invalidate(); },
+    onError: (err) => {
+      setMessages(prev => [...prev, { role: "assistant", content: `Error: ${err.message || "Failed to get response"}. Please try again.` }]);
+    },
+  });
   const clear = trpc.ai.clear.useMutation({ onSuccess: () => { setMessages([]); utils.ai.history.invalidate(); } });
 
   useEffect(() => { if (history?.length && !messages.length) setMessages(history.map(h => ({ role: h.role as "user" | "assistant", content: h.content }))); }, [history]);

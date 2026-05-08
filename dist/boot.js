@@ -50741,6 +50741,10 @@ Your expertise includes UK property law, conveyancing procedures, Stamp Duty cal
 
 Always provide accurate UK property information. Be concise but thorough. Remind users your guidance doesn't replace professional legal advice.`;
 async function callAnthropic(apiKey, messages) {
+  if (!apiKey) {
+    throw new Error("Anthropic API key not configured");
+  }
+  console.log(`[AI] Calling Anthropic with ${messages.length} messages`);
   const response = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
     headers: {
@@ -50756,20 +50760,36 @@ async function callAnthropic(apiKey, messages) {
     })
   });
   if (!response.ok) {
-    const error48 = await response.text();
-    throw new Error(`Anthropic API error: ${response.status} - ${error48}`);
+    const errorText = await response.text();
+    console.error(`[AI] Anthropic error ${response.status}: ${errorText}`);
+    throw new Error(`Anthropic API error: ${response.status}`);
   }
   const data = await response.json();
-  return data.content?.[0]?.text || "I'm sorry, I couldn't process your request.";
+  const text2 = data.content?.[0]?.text || "I'm sorry, I couldn't process your request.";
+  console.log(`[AI] Response received: ${text2.substring(0, 100)}...`);
+  return text2;
 }
 var aiRouter = createRouter({
   chat: authedQuery.input(external_exports.object({ message: external_exports.string().min(1), transactionId: external_exports.number().optional() })).mutation(async ({ input, ctx }) => {
-    await createChatMessage({ userId: ctx.user.id, role: "user", content: input.message, transactionId: input.transactionId });
-    const history = await findChatMessagesByUserId(ctx.user.id, 20);
-    const messages = history.map((h) => ({ role: h.role, content: h.content }));
-    const response = await callAnthropic(env.anthropicApiKey || "", messages);
-    await createChatMessage({ userId: ctx.user.id, role: "assistant", content: response, transactionId: input.transactionId });
-    return { response };
+    try {
+      console.log(`[AI] Chat from user ${ctx.user.id}: ${input.message.substring(0, 50)}`);
+      await createChatMessage({ userId: ctx.user.id, role: "user", content: input.message, transactionId: input.transactionId });
+      const history = await findChatMessagesByUserId(ctx.user.id, 20);
+      const messages = history.map((h) => ({ role: h.role, content: h.content }));
+      if (!env.anthropicApiKey) {
+        console.error("[AI] ANTHROPIC_API_KEY not set");
+        const fallback = "I'm sorry, the AI service is not configured. Please ask your administrator to set the ANTHROPIC_API_KEY environment variable.";
+        await createChatMessage({ userId: ctx.user.id, role: "assistant", content: fallback, transactionId: input.transactionId });
+        return { response: fallback };
+      }
+      const response = await callAnthropic(env.anthropicApiKey, messages);
+      await createChatMessage({ userId: ctx.user.id, role: "assistant", content: response, transactionId: input.transactionId });
+      return { response };
+    } catch (err) {
+      console.error("[AI] Chat error:", err);
+      const errorMsg = `Sorry, I encountered an error: ${err.message || "Unknown error"}`;
+      return { response: errorMsg };
+    }
   }),
   history: authedQuery.input(external_exports.object({ limit: external_exports.number().min(1).max(100).default(50) }).optional()).query(async ({ ctx, input }) => findChatMessagesByUserId(ctx.user.id, input?.limit || 50)),
   clear: authedQuery.mutation(async ({ ctx }) => {
