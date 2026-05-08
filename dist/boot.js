@@ -1711,7 +1711,7 @@ var init_sql = __esm({
         return new SQL([new StringChunk(str)]);
       }
       sql2.raw = raw2;
-      function join2(chunks, separator) {
+      function join(chunks, separator) {
         const result = [];
         for (const [i, chunk] of chunks.entries()) {
           if (i > 0 && separator !== void 0) {
@@ -1721,7 +1721,7 @@ var init_sql = __esm({
         }
         return new SQL(result);
       }
-      sql2.join = join2;
+      sql2.join = join;
       function identifier(value) {
         return new Name(value);
       }
@@ -18223,7 +18223,7 @@ var require_query2 = __commonJS({
     "use strict";
     var process3 = __require("process");
     var Timers = __require("timers");
-    var Readable3 = __require("stream").Readable;
+    var Readable2 = __require("stream").Readable;
     var Command = require_command();
     var Packets = require_packets();
     var getTextParser = require_text_parser();
@@ -18465,7 +18465,7 @@ var require_query2 = __commonJS({
       stream(options) {
         options = options || /* @__PURE__ */ Object.create(null);
         options.objectMode = true;
-        const stream = new Readable3({
+        const stream = new Readable2({
           ...options,
           emitClose: true,
           autoDestroy: true,
@@ -19727,7 +19727,7 @@ var require_named_placeholders = __commonJS({
         }
         return s;
       }
-      function join2(tree) {
+      function join(tree) {
         if (tree.length === 1) {
           return tree;
         }
@@ -19753,7 +19753,7 @@ var require_named_placeholders = __commonJS({
         if (cache2 && (tree = cache2.get(query))) {
           return toArrayParams(tree, paramsObj);
         }
-        tree = join2(parse6(query));
+        tree = join(parse6(query));
         if (cache2) {
           cache2.set(query, tree);
         }
@@ -19801,7 +19801,7 @@ var require_connection = __commonJS({
     var Tls = __require("tls");
     var Timers = __require("timers");
     var EventEmitter = __require("events").EventEmitter;
-    var Readable3 = __require("stream").Readable;
+    var Readable2 = __require("stream").Readable;
     var Queue = require_denque();
     var SqlString = require_lib();
     var { createLRU } = require_lib3();
@@ -20584,7 +20584,7 @@ var require_connection = __commonJS({
       }
       createBinlogStream(opts) {
         let test = 1;
-        const stream = new Readable3({ objectMode: true });
+        const stream = new Readable2({ objectMode: true });
         stream._read = function() {
           return {
             data: test++
@@ -25378,7 +25378,7 @@ var init_select2 = __esm({
           const baseTableName = this.tableName;
           const tableName = getTableLikeName(table);
           for (const item of extractUsedTable(table)) this.usedTables.add(item);
-          if (typeof tableName === "string" && this.config.joins?.some((join2) => join2.alias === tableName)) {
+          if (typeof tableName === "string" && this.config.joins?.some((join) => join.alias === tableName)) {
             throw new Error(`Alias "${tableName}" is already used in this query`);
           }
           if (!this.isPartialSelect) {
@@ -31024,239 +31024,6 @@ var init_dist = __esm({
   }
 });
 
-// node_modules/hono/dist/utils/mime.js
-var getMimeType, _baseMimes, baseMimes;
-var init_mime = __esm({
-  "node_modules/hono/dist/utils/mime.js"() {
-    getMimeType = (filename, mimes = baseMimes) => {
-      const regexp = /\.([a-zA-Z0-9]+?)$/;
-      const match2 = filename.match(regexp);
-      if (!match2) {
-        return;
-      }
-      let mimeType = mimes[match2[1].toLowerCase()];
-      if (mimeType && mimeType.startsWith("text")) {
-        mimeType += "; charset=utf-8";
-      }
-      return mimeType;
-    };
-    _baseMimes = {
-      aac: "audio/aac",
-      avi: "video/x-msvideo",
-      avif: "image/avif",
-      av1: "video/av1",
-      bin: "application/octet-stream",
-      bmp: "image/bmp",
-      css: "text/css",
-      csv: "text/csv",
-      eot: "application/vnd.ms-fontobject",
-      epub: "application/epub+zip",
-      gif: "image/gif",
-      gz: "application/gzip",
-      htm: "text/html",
-      html: "text/html",
-      ico: "image/x-icon",
-      ics: "text/calendar",
-      jpeg: "image/jpeg",
-      jpg: "image/jpeg",
-      js: "text/javascript",
-      json: "application/json",
-      jsonld: "application/ld+json",
-      map: "application/json",
-      mid: "audio/x-midi",
-      midi: "audio/x-midi",
-      mjs: "text/javascript",
-      mp3: "audio/mpeg",
-      mp4: "video/mp4",
-      mpeg: "video/mpeg",
-      oga: "audio/ogg",
-      ogv: "video/ogg",
-      ogx: "application/ogg",
-      opus: "audio/opus",
-      otf: "font/otf",
-      pdf: "application/pdf",
-      png: "image/png",
-      rtf: "application/rtf",
-      svg: "image/svg+xml",
-      tif: "image/tiff",
-      tiff: "image/tiff",
-      ts: "video/mp2t",
-      ttf: "font/ttf",
-      txt: "text/plain",
-      wasm: "application/wasm",
-      webm: "video/webm",
-      weba: "audio/webm",
-      webmanifest: "application/manifest+json",
-      webp: "image/webp",
-      woff: "font/woff",
-      woff2: "font/woff2",
-      xhtml: "application/xhtml+xml",
-      xml: "application/xml",
-      zip: "application/zip",
-      "3gp": "video/3gpp",
-      "3g2": "video/3gpp2",
-      gltf: "model/gltf+json",
-      glb: "model/gltf-binary"
-    };
-    baseMimes = _baseMimes;
-  }
-});
-
-// node_modules/@hono/node-server/dist/serve-static.mjs
-import { createReadStream, statSync, existsSync } from "fs";
-import { join } from "path";
-import { versions } from "process";
-import { Readable as Readable2 } from "stream";
-var COMPRESSIBLE_CONTENT_TYPE_REGEX, ENCODINGS, ENCODINGS_ORDERED_KEYS, pr54206Applied, useReadableToWeb, createStreamBody, getStats, tryDecode2, tryDecodeURI2, serveStatic;
-var init_serve_static = __esm({
-  "node_modules/@hono/node-server/dist/serve-static.mjs"() {
-    init_mime();
-    COMPRESSIBLE_CONTENT_TYPE_REGEX = /^\s*(?:text\/[^;\s]+|application\/(?:javascript|json|xml|xml-dtd|ecmascript|dart|postscript|rtf|tar|toml|vnd\.dart|vnd\.ms-fontobject|vnd\.ms-opentype|wasm|x-httpd-php|x-javascript|x-ns-proxy-autoconfig|x-sh|x-tar|x-virtualbox-hdd|x-virtualbox-ova|x-virtualbox-ovf|x-virtualbox-vbox|x-virtualbox-vdi|x-virtualbox-vhd|x-virtualbox-vmdk|x-www-form-urlencoded)|font\/(?:otf|ttf)|image\/(?:bmp|vnd\.adobe\.photoshop|vnd\.microsoft\.icon|vnd\.ms-dds|x-icon|x-ms-bmp)|message\/rfc822|model\/gltf-binary|x-shader\/x-fragment|x-shader\/x-vertex|[^;\s]+?\+(?:json|text|xml|yaml))(?:[;\s]|$)/i;
-    ENCODINGS = {
-      br: ".br",
-      zstd: ".zst",
-      gzip: ".gz"
-    };
-    ENCODINGS_ORDERED_KEYS = Object.keys(ENCODINGS);
-    pr54206Applied = () => {
-      const [major, minor] = versions.node.split(".").map((component) => parseInt(component));
-      return major >= 23 || major === 22 && minor >= 7 || major === 20 && minor >= 18;
-    };
-    useReadableToWeb = pr54206Applied();
-    createStreamBody = (stream) => {
-      if (useReadableToWeb) {
-        return Readable2.toWeb(stream);
-      }
-      const body = new ReadableStream({
-        start(controller) {
-          stream.on("data", (chunk) => {
-            controller.enqueue(chunk);
-          });
-          stream.on("error", (err) => {
-            controller.error(err);
-          });
-          stream.on("end", () => {
-            controller.close();
-          });
-        },
-        cancel() {
-          stream.destroy();
-        }
-      });
-      return body;
-    };
-    getStats = (path2) => {
-      let stats;
-      try {
-        stats = statSync(path2);
-      } catch {
-      }
-      return stats;
-    };
-    tryDecode2 = (str, decoder2) => {
-      try {
-        return decoder2(str);
-      } catch {
-        return str.replace(/(?:%[0-9A-Fa-f]{2})+/g, (match2) => {
-          try {
-            return decoder2(match2);
-          } catch {
-            return match2;
-          }
-        });
-      }
-    };
-    tryDecodeURI2 = (str) => tryDecode2(str, decodeURI);
-    serveStatic = (options = { root: "" }) => {
-      const root = options.root || "";
-      const optionPath = options.path;
-      if (root !== "" && !existsSync(root)) {
-        console.error(`serveStatic: root path '${root}' is not found, are you sure it's correct?`);
-      }
-      return async (c, next) => {
-        if (c.finalized) {
-          return next();
-        }
-        let filename;
-        if (optionPath) {
-          filename = optionPath;
-        } else {
-          try {
-            filename = tryDecodeURI2(c.req.path);
-            if (/(?:^|[\/\\])\.{1,2}(?:$|[\/\\])|[\/\\]{2,}/.test(filename)) {
-              throw new Error();
-            }
-          } catch {
-            await options.onNotFound?.(c.req.path, c);
-            return next();
-          }
-        }
-        let path2 = join(
-          root,
-          !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
-        );
-        let stats = getStats(path2);
-        if (stats && stats.isDirectory()) {
-          const indexFile = options.index ?? "index.html";
-          path2 = join(path2, indexFile);
-          stats = getStats(path2);
-        }
-        if (!stats) {
-          await options.onNotFound?.(path2, c);
-          return next();
-        }
-        const mimeType = getMimeType(path2);
-        c.header("Content-Type", mimeType || "application/octet-stream");
-        if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
-          const acceptEncodingSet = new Set(
-            c.req.header("Accept-Encoding")?.split(",").map((encoding) => encoding.trim())
-          );
-          for (const encoding of ENCODINGS_ORDERED_KEYS) {
-            if (!acceptEncodingSet.has(encoding)) {
-              continue;
-            }
-            const precompressedStats = getStats(path2 + ENCODINGS[encoding]);
-            if (precompressedStats) {
-              c.header("Content-Encoding", encoding);
-              c.header("Vary", "Accept-Encoding", { append: true });
-              stats = precompressedStats;
-              path2 = path2 + ENCODINGS[encoding];
-              break;
-            }
-          }
-        }
-        let result;
-        const size = stats.size;
-        const range = c.req.header("range") || "";
-        if (c.req.method == "HEAD" || c.req.method == "OPTIONS") {
-          c.header("Content-Length", size.toString());
-          c.status(200);
-          result = c.body(null);
-        } else if (!range) {
-          c.header("Content-Length", size.toString());
-          result = c.body(createStreamBody(createReadStream(path2)), 200);
-        } else {
-          c.header("Accept-Ranges", "bytes");
-          c.header("Date", stats.birthtime.toUTCString());
-          const parts = range.replace(/bytes=/, "").split("-", 2);
-          const start = parseInt(parts[0], 10) || 0;
-          let end = parseInt(parts[1], 10) || size - 1;
-          if (size < end - start + 1) {
-            end = size - 1;
-          }
-          const chunksize = end - start + 1;
-          const stream = createReadStream(path2, { start, end });
-          c.header("Content-Length", chunksize.toString());
-          c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
-          result = c.body(createStreamBody(stream), 206);
-        }
-        await options.onFound?.(path2, c);
-        return result;
-      };
-    };
-  }
-});
-
 // api/lib/vite.ts
 var vite_exports = {};
 __export(vite_exports, {
@@ -31275,33 +31042,48 @@ function findDistPath() {
   ];
   for (const candidate of candidates) {
     if (fs.existsSync(path.join(candidate, "index.html"))) {
-      console.log(`[Static] Found frontend at: ${candidate}`);
       return candidate;
     }
   }
-  console.error("[Static] Could not find dist/public with index.html");
   return null;
 }
 function serveStaticFiles(app2) {
   const distPath = findDistPath();
   if (!distPath) {
-    app2.use("*", (c) => c.json({ error: "Frontend not built" }, 500));
+    app2.notFound((c) => c.json({ error: "Frontend not built" }, 500));
     return;
   }
-  app2.use("*", async (c, next) => {
-    const path2 = c.req.path;
-    if (path2.startsWith("/api/") || path2.startsWith("/health")) {
-      return await next();
+  app2.use("/assets/*", async (c, next) => {
+    const filePath = path.join(distPath, c.req.path);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const ext = path.extname(filePath);
+      const mimeTypes = {
+        ".js": "application/javascript",
+        ".css": "text/css",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".svg": "image/svg+xml",
+        ".ico": "image/x-icon"
+      };
+      const content = fs.readFileSync(filePath);
+      return c.body(content, 200, { "Content-Type": mimeTypes[ext] || "application/octet-stream" });
     }
-    const staticHandler = serveStatic({ root: distPath });
-    return await staticHandler(c, next);
+    return await next();
+  });
+  app2.use("/*.ico", async (c, next) => {
+    const filePath = path.join(distPath, c.req.path);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const content = fs.readFileSync(filePath);
+      return c.body(content, 200, { "Content-Type": "image/x-icon" });
+    }
+    return await next();
   });
   app2.notFound((c) => {
     const reqPath = c.req.path;
-    if (reqPath.startsWith("/api/")) {
+    if (reqPath.startsWith("/api/") || reqPath === "/health") {
       return c.json({ error: "Not Found" }, 404);
     }
-    const indexPath = path.resolve(distPath, "index.html");
+    const indexPath = path.join(distPath, "index.html");
     const content = fs.readFileSync(indexPath, "utf-8");
     return c.html(content);
   });
@@ -31309,7 +31091,6 @@ function serveStaticFiles(app2) {
 var __dirname;
 var init_vite = __esm({
   "api/lib/vite.ts"() {
-    init_serve_static();
     __dirname = fileURLToPath(new URL(".", import.meta.url));
   }
 });

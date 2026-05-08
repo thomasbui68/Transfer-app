@@ -15,22 +15,30 @@ export default function Transactions() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [txType, setTxType] = useState<string>("");
+  const [propertyId, setPropertyId] = useState<string>("");
   const utils = trpc.useUtils();
   const { data: transactions, isLoading } = trpc.transaction.list.useQuery();
   const { data: properties } = trpc.property.list.useQuery();
 
   const createTx = trpc.transaction.create.useMutation({
-    onSuccess: () => { utils.transaction.list.invalidate(); setOpen(false); toast.success("Transaction created"); },
+    onSuccess: () => { utils.transaction.list.invalidate(); setOpen(false); setTxType(""); setPropertyId(""); toast.success("Transaction created"); },
     onError: (err) => toast.error(err.message),
   });
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
+    if (!txType || !propertyId) {
+      toast.error("Please select transaction type and property");
+      return;
+    }
     createTx.mutate({
-      reference: `TX-${Date.now()}`, title: f.get("title") as string,
-      type: f.get("type") as "purchase" | "sale" | "remortgage" | "transfer",
-      propertyId: Number(f.get("propertyId")), clientId: 1,
+      reference: `TX-${Date.now()}`,
+      title: f.get("title") as string,
+      type: txType as "purchase" | "sale" | "remortgage" | "transfer",
+      propertyId: Number(propertyId),
+      clientId: 1,
       agreedPrice: f.get("agreedPrice") as string,
       depositAmount: (f.get("depositAmount") as string) || undefined,
       mortgageLender: (f.get("mortgageLender") as string) || undefined,
@@ -66,11 +74,13 @@ export default function Transactions() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div><Label>Title *</Label><Input name="title" required placeholder="e.g., 123 High Street Purchase" /></div>
               <div><Label>Type *</Label>
-                <Select name="type" required><SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                <Select value={txType} onValueChange={setTxType} required>
+                  <SelectTrigger id="type"><SelectValue placeholder="Select type" /></SelectTrigger>
                   <SelectContent><SelectItem value="purchase">Purchase</SelectItem><SelectItem value="sale">Sale</SelectItem><SelectItem value="remortgage">Remortgage</SelectItem><SelectItem value="transfer">Transfer</SelectItem></SelectContent>
                 </Select></div>
               <div><Label>Property *</Label>
-                <Select name="propertyId" required><SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
+                <Select value={propertyId} onValueChange={setPropertyId} required>
+                  <SelectTrigger id="propertyId"><SelectValue placeholder="Select property" /></SelectTrigger>
                   <SelectContent>{properties?.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.address}</SelectItem>)}</SelectContent>
                 </Select></div>
               <div><Label>Agreed Price (&pound;) *</Label><Input name="agreedPrice" type="number" required placeholder="450000" /></div>

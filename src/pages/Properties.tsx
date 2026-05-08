@@ -13,20 +13,26 @@ import { toast } from "sonner";
 export default function Properties() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [propertyType, setPropertyType] = useState<string>("");
   const utils = trpc.useUtils();
   const { data: properties, isLoading } = trpc.property.list.useQuery(search ? { search } : { search: undefined });
 
   const createProperty = trpc.property.create.useMutation({
-    onSuccess: () => { utils.property.list.invalidate(); setOpen(false); toast.success("Property created"); },
+    onSuccess: () => { utils.property.list.invalidate(); setOpen(false); setPropertyType(""); toast.success("Property created"); },
     onError: (err) => toast.error(err.message),
   });
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
+    if (!propertyType) {
+      toast.error("Please select a property type");
+      return;
+    }
     createProperty.mutate({
-      address: f.get("address") as string, postcode: f.get("postcode") as string,
-      propertyType: f.get("propertyType") as "freehold" | "leasehold" | "share_of_freehold" | "commonhold",
+      address: f.get("address") as string,
+      postcode: f.get("postcode") as string,
+      propertyType: propertyType as "freehold" | "leasehold" | "share_of_freehold" | "commonhold",
       price: f.get("price") as string,
       bedrooms: f.get("bedrooms") ? Number(f.get("bedrooms")) : undefined,
       bathrooms: f.get("bathrooms") ? Number(f.get("bathrooms")) : undefined,
@@ -51,8 +57,8 @@ export default function Properties() {
               <div><Label htmlFor="addr">Address *</Label><Input id="addr" name="address" required placeholder="123 High Street" /></div>
               <div><Label htmlFor="pc">Postcode *</Label><Input id="pc" name="postcode" required placeholder="SW1A 1AA" /></div>
               <div><Label htmlFor="pt">Property Type *</Label>
-                <Select name="propertyType" required>
-                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                <Select value={propertyType} onValueChange={setPropertyType} required>
+                  <SelectTrigger id="pt"><SelectValue placeholder="Select type" /></SelectTrigger>
                   <SelectContent><SelectItem value="freehold">Freehold</SelectItem><SelectItem value="leasehold">Leasehold</SelectItem><SelectItem value="share_of_freehold">Share of Freehold</SelectItem><SelectItem value="commonhold">Commonhold</SelectItem></SelectContent>
                 </Select></div>
               <div><Label htmlFor="pr">Price (&pound;) *</Label><Input id="pr" name="price" type="number" required placeholder="450000" /></div>
