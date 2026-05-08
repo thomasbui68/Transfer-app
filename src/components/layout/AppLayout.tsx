@@ -24,6 +24,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const loginUrl = `/api/oauth/authorize?client_id=${import.meta.env.VITE_APP_ID}&redirect_uri=${encodeURIComponent(`${window.location.origin}/api/oauth/callback`)}&response_type=code&scope=profile&state=${btoa(`${window.location.origin}/api/oauth/callback`)}`;
+  const demoLoginUrl = `/api/demo-login`;
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -71,9 +72,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
         ) : (
-          <a href={loginUrl}><Button variant="default" size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700">
-            <LogIn className="w-4 h-4 mr-2" /> Sign in
-          </Button></a>
+          <div className="space-y-2">
+            <a href={demoLoginUrl}>
+              <Button variant="default" size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700">
+                <LogIn className="w-4 h-4 mr-2" /> Try Demo (No Sign-up)
+              </Button>
+            </a>
+            <a href={loginUrl}>
+              <Button variant="outline" size="sm" className="w-full">
+                Sign in with Kimi
+              </Button>
+            </a>
+          </div>
         )}
       </div>
     </div>
